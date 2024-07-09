@@ -60,6 +60,7 @@ Below is an example config file:
 
 }
 ```
+All fields explained:
 ```
 "service" - if the program should use gsettings or hydrapaper.
           - "gsettings" is for one image on each monitor, working with only one monitor, or spanning images across both
