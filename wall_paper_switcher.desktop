@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=WallPaperSwitcher
+Comment=PeriodicallyChangeWallPaperWithMultiMonitorSupport
+Icon=gnome-info
+Exec=python3 /home/miles/.local/share/wall_paper_switcher/main_v2.py
+Terminal=false
+Type=Application
+Categories=
+
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=0
