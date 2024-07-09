@@ -191,7 +191,7 @@ class ConfigReader():
         parent_path = None
         try:
             parent_path = self.config_data['image_parent_directory']
-            if not os.path.isdir(parent_path):
+            if not os.path.isdir(os.path.exapanduser(parent_path)):
                 self.critical_error = True
                 self.logger.log(f"CRITICAL ERROR: invalid parent folder '{parent_path}'")
         
@@ -259,6 +259,7 @@ class ConfigReader():
         
         folders = [os.path.join(self.config_data['image_parent_directory'], f) for f in folders]
         for folder in folders:
+            folder = os.path.exanduser(folder)
             if not os.path.isdir(folder):
                 self.logger.log(f"ERROR invalid folder path '{folder}'")
                 continue
