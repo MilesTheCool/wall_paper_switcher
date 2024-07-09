@@ -60,7 +60,7 @@ Below is an example config file:
 
 }
 ```
-
+```
 "service" - if the program should use gsettings or hydrapaper.
           - "gsettings" is for one image on each monitor, working with only one monitor, or spanning images across both
           - "hydrapaper" is for having a different image on each monitor
@@ -101,7 +101,7 @@ Below is an example config file:
                - lists all subdirectories of images to display to the right monitor
                - in the example, only landscape images will be displayed to the monitor
                - listing more directories will mix more images into the pool to be displayed
-
+```
 
 ## File Structure
 The wall_paper_switcher folder should be placed in ~/.local/share/
