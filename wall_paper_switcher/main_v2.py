@@ -342,7 +342,6 @@ class WallPaperSwitcher():
         os.system(f"gsettings set org.gnome.desktop.background picture-options {self.config.config_data['gsettings_mode']}")
         
         try:
-            #while (not self.killer.kill_now)
             while True:
                 shuffle(self.config.config_data['image_folders']['one_monitor'])
                 
