@@ -28,7 +28,7 @@ however, the flatpak version of hydrapaper is recommended
 ## All Config Fields 
 Below is an example config file:
 
-
+```
 {
     "service" : "gsettings",
 
@@ -59,6 +59,7 @@ Below is an example config file:
     }
 
 }
+```
 
 "service" - if the program should use gsettings or hydrapaper.
           - "gsettings" is for one image on each monitor, working with only one monitor, or spanning images across both
