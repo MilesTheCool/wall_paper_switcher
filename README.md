@@ -97,8 +97,21 @@ Below is an example config file:
                - in the example, only space images will be displayed to the monitor
                - listing more directories will mix more images into the pool to be displayed
 
-
 "right_monitor" - only checked when "service" is "hydrapaper"
                - lists all subdirectories of images to display to the right monitor
                - in the example, only landscape images will be displayed to the monitor
                - listing more directories will mix more images into the pool to be displayed
+
+
+## File Structure
+The wall_paper_switcher folder should be placed in ~/.local/share/
+
+If placed somewhere else, the wall_paper_switcher.desktop file will need to be updated with the new location 
+of the script file. A config file and error log will be auto-generated in the same directory as the script if 
+they are missing. 
+
+The wall_paper_switcher.desktop MUST be placed in ~/.config/autostart/ to ensure that it is properly run on startup
+
+background image files may be placed anywhere within the user directory, as the path is specified in the config file. 
+When working with hydrapaper, because of how flatpak sandboxes it, it may not work if iamge files are not in the users home directory. 
+By default, it looks for ~/Pictures/wallPapers/ as the parent directory
