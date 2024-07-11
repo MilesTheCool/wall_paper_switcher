@@ -1,5 +1,5 @@
 {
-    "service" : "gsettings",
+    "service" : "hydrapaper",
 
     "gsettings_mode" : "zoom",
     "gnome_color_theme" : "dark",
@@ -8,7 +8,7 @@
 
     "switch_time" : "5",
 
-    "image_parent_directory" : "/home/miles/Pictures",
+    "image_parent_directory" : "~/Pictures",
     "image_folders" : 
     {
         "one_monitor" :
@@ -18,12 +18,12 @@
         ,
         "left_monitor"  : 
             [
-                "gnome", "sway"
+                "WallPapers"
             ]
         ,
         "right_monitor" : 
             [
-                "sway", "gnome"
+                "WallPapers"
             ]
     }
 
