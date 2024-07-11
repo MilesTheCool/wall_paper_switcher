@@ -24,6 +24,8 @@ from time import sleep  # to pause between switches
 from random import shuffle # shuffle pictures to randomize display order
 from datetime import datetime # to display in the log file the time last executed
 import json # to read/write the config file
+from PIL import Image # used to join pictures together manually
+
 
 class ErrorLogger():
     """
@@ -33,17 +35,10 @@ class ErrorLogger():
             Class Members:
                 path : str - the full path to the log file
     """
-    def __init__(self):
-        
-        # place it in the same directory as the script
-        folder = __file__
-        while (folder):
-            folder = folder[:-1]
-            if (folder[-1] == '/'):
-                break
+    def __init__(self, directory : str):
         
         # determine the full file path for the log file
-        self.path = folder + "errors.log"
+        self.path = directory + "errors.log"
         
         # overwrite old-log, or create a 
         # blank log file if it doesn't exist
@@ -63,17 +58,10 @@ class ErrorLogger():
         return datetime.now().strftime("%a %b %d @ %-I:%M:%S %p")
                     
 class ConfigReader():
-    def __init__(self, logger : ErrorLogger):
-        
-        # find the dir where the file is
-        folder = __file__
-        while (folder):
-            folder = folder[:-1]
-            if (folder[-1] == '/'):
-                break
+    def __init__(self, logger : ErrorLogger, directory : str):
         
         # determine the full file path for the config file
-        self.path = folder + "config.json"
+        self.path = directory + "config.json"
         
         # check if it exists, if not, make a default one
         if (not os.path.isfile(self.path)):
@@ -337,9 +325,16 @@ class ConfigReader():
         
 class WallPaperSwitcher():
     def __init__(self):
-        self.logger = ErrorLogger()
+        
+        self.directory = __file__
+        while (self.directory):
+            self.directory = self.directory[:-1]
+            if (self.directory[-1] == '/'):
+                break
+        
+        self.logger = ErrorLogger(self.directory)
         # get config file info
-        self.config = ConfigReader(self.logger)
+        self.config = ConfigReader(self.logger, self.directory)
         self.keyboard_interupt = False
         
     def use_gsettings(self):
@@ -365,8 +360,7 @@ class WallPaperSwitcher():
             self.logger.log("Keyboard interrupt detected, terminating program...")
             self.keyboard_interupt = True
             
-        
-                
+           
     def use_hydrapaper(self):
         print("in hydrapaper")
         
@@ -395,6 +389,7 @@ class WallPaperSwitcher():
                     shuffle(right_files)
                     
                 os.system(f"flatpak run org.gabmus.hydrapaper -c {left_files[left_index]} {right_files[right_index]}")
+                self.join_images([left_files[left_index], right_files[right_index]])
                 
                 if not self.config.config_data['hydrapaper_stagger']:
                     left_index += 1
@@ -419,7 +414,31 @@ class WallPaperSwitcher():
         except KeyboardInterrupt:
             self.logger.log("Keyboard interrupt detected, terminating program...")
             self.keyboard_interupt = True
-            
+    
+    
+    def join_images(self, image_paths):
+        
+        # target size for each screen assume 1920x1080
+        target_width, target_height = 1920,1080
+        
+        # open and resize images
+        images = [Image.open(x).resize((target_width, target_height), Image.LANCZOS) for x in image_paths]
+        
+        # calculate dimensions for new image
+        total_width = target_width * len(images)
+        max_height = target_height
+
+        # create new image of combined width and height
+        new_im = Image.new('RGB', (total_width, max_height))
+
+        # 'paste' images onto larger image
+        x_offset = 0
+        for im in images:
+            new_im.paste(im, (x_offset,0))
+            x_offset += im.size[0]
+
+        # save in the current directory
+        new_im.save(self.directory + "/.joined_file.jpg")
             
         
     
