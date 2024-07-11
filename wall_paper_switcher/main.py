@@ -49,7 +49,7 @@ class ErrorLogger():
         # blank log file if it doesn't exist
         with open(self.path, 'w') as f:
             # write the datetime at the top for reference
-            formatted_time = "Ran On: " + datetime.now().strftime("%a %b %d @ %-I:%M%p")
+            formatted_time = "Ran On: " + self.time_str()
             f.write(formatted_time + "\n")
             [f.write('-') for i in range(len(formatted_time))]
             f.write('\n\n')
@@ -58,10 +58,14 @@ class ErrorLogger():
     def log(self, log_message: str):
         with open(self.path, 'a') as f:
             f.write(log_message + "\n")
+            
+    def time_str(self) -> str:
+        return datetime.now().strftime("%a %b %d @ %-I:%M:%S %p")
                     
 class ConfigReader():
     def __init__(self, logger : ErrorLogger):
-        # find the same
+        
+        # find the dir where the file is
         folder = __file__
         while (folder):
             folder = folder[:-1]
@@ -69,20 +73,38 @@ class ConfigReader():
                 break
         
         # determine the full file path for the config file
-        path = folder + "config.json"
+        self.path = folder + "config.json"
         
         # check if it exists, if not, make a default one
-        if (not os.path.isfile(path)):
-            self.create_default_config_file(path)
+        if (not os.path.isfile(self.path)):
+            self.create_default_config_file()
             
-        # read in all the data
-        with open(path, 'r') as file:
-            self.config_data = json.load(file)
+        # track last time config file modified
+        self.last_modified = os.stat(self.path).st_ctime
+            
+        # var to track config data, to be filled in validate
+        # config
+        self.config_data = None 
             
         # validate the data to make sure they have good values.
         self.critical_error = False
         self.logger = logger
         self.validate_config()
+    
+    def check_config_updated(self) -> bool:
+        modified = os.stat(self.path).st_ctime
+        if self.last_modified != modified:
+            self.last_modified = modified
+            self.logger.log(f"\nConfig File Updated - {self.logger.time_str()}")
+            
+            # update all the config variables
+            self.critical_error = False # assume no error until read
+            self.validate_config()
+            return True # was updated
+        else:
+            return False # was not updated
+            
+
         
     def validate_config(self):
         """ 
@@ -92,6 +114,9 @@ class ConfigReader():
             If errors are found, they will be logged. If possible, 
             default values will be assigned
         """
+        # read in all the data
+        with open(self.path, 'r') as file:
+            self.config_data = json.load(file)
         
         # check the service, this is a critical check
         service = None
@@ -191,7 +216,7 @@ class ConfigReader():
         parent_path = None
         try:
             parent_path = self.config_data['image_parent_directory']
-            if not os.path.isdir(os.path.exapanduser(parent_path)):
+            if not os.path.isdir(os.path.expanduser(parent_path)):
                 self.critical_error = True
                 self.logger.log(f"CRITICAL ERROR: invalid parent folder '{parent_path}'")
         
@@ -259,7 +284,7 @@ class ConfigReader():
         
         folders = [os.path.join(self.config_data['image_parent_directory'], f) for f in folders]
         for folder in folders:
-            folder = os.path.exanduser(folder)
+            folder = os.path.expanduser(folder)
             if not os.path.isdir(folder):
                 self.logger.log(f"ERROR invalid folder path '{folder}'")
                 continue
@@ -274,28 +299,10 @@ class ConfigReader():
                     
         return valid_files
  
-                
+                        
+    def create_default_config_file(self):
         
-    """
-        def filter_images(files, valid_exts):
-        valid_files = []
-        invalid_files = []
-        
-        for file in files:
-            if any(file.lower().endswith(ext) for ext in valid_exts):
-                valid_files.append(file)
-            else:
-                invalid_files.append(file)
-                
-        if invalid_files:
-            log_errors("ERROR invalid files found: ")
-            [log_errors(f"\t{f}") for f in invalid_files]
-        return valid_files
-    """
-        
-    def create_default_config_file(self, path : str):
-        
-        with open(path, 'w') as f:
+        with open(self.path, 'w') as f:
             contents = """{
     "service" : "gsettings",
 
@@ -333,41 +340,105 @@ class WallPaperSwitcher():
         self.logger = ErrorLogger()
         # get config file info
         self.config = ConfigReader(self.logger)
+        self.keyboard_interupt = False
         
     def use_gsettings(self):
         """ Use gsettings to display to one image"""
+        print("In gsettings")
         
-        
-        # only need to set the gsettings mode once
-        os.system(f"gsettings set org.gnome.desktop.background picture-options {self.config.config_data['gsettings_mode']}")
         
         try:
             while True:
+                # set gsettings mode once before displaying all images
+                os.system(f"gsettings set org.gnome.desktop.background picture-options {self.config.config_data['gsettings_mode']}")
                 shuffle(self.config.config_data['image_folders']['one_monitor'])
                 
                 for f in self.config.config_data['image_folders']['one_monitor']:
                     os.system(f"gsettings set org.gnome.desktop.background {self.config.config_data['gnome_color_theme']} file://{f}")
                     sleep(self.config.config_data['switch_time'])
-                                        
+                    
+                    # check if config file updated
+                    if self.config.check_config_updated():
+                        return # may not be using gsettings or invalid config
+                                                        
         except KeyboardInterrupt:
             self.logger.log("Keyboard interrupt detected, terminating program...")
+            self.keyboard_interupt = True
             
         
                 
-    def use_hydrapaper():
-        ...
+    def use_hydrapaper(self):
+        print("in hydrapaper")
         
+        try:
+            
+            left_files = self.config.config_data['image_folders']['left_monitor']
+            right_files = self.config.config_data['image_folders']['right_monitor']
+            
+            # use ints to index lists
+            left_index = 0
+            right_index = 0
+            
+            shuffle(left_files)
+            shuffle(right_files)
+            
+            rights_turn = True  #flag for use when staggered, not used otherwise
+
+            while True:
+                
+                # if index is too large, set to 0 and reshuffle
+                if left_index > len(left_files) - 1:
+                    left_index = 0
+                    shuffle(left_files)
+                if right_index > len(right_files) - 1:
+                    right_index = 0
+                    shuffle(right_files)
+                    
+                os.system(f"flatpak run org.gabmus.hydrapaper -c {left_files[left_index]} {right_files[right_index]}")
+                
+                if not self.config.config_data['hydrapaper_stagger']:
+                    left_index += 1
+                    right_index += 1
+                    
+                    sleep(self.config.config_data['switch_time'])
+                    
+                else:
+                    if rights_turn:
+                        right_index += 1
+                    else:
+                        left_index += 1
+                        
+                    sleep(self.config.config_data['switch_time'] / 2)
+                    rights_turn = not rights_turn
+                    
+                
+                # check if config file updated
+                if self.config.check_config_updated():
+                    return # may not be using gsettings or invalid config
+                                                        
+        except KeyboardInterrupt:
+            self.logger.log("Keyboard interrupt detected, terminating program...")
+            self.keyboard_interupt = True
+            
+            
         
+    
         
         
 if __name__ == "__main__":
     switcher = WallPaperSwitcher()
-    if (not switcher.config.critical_error):
-        if (switcher.config.config_data['service'] == 'gsettings'):
-            switcher.use_gsettings()
-        else:
-            switcher.use_hydrapaper()
-            
     
-    formatted_time =  datetime.now().strftime("%a %b %d @ %-I:%M%p")
-    switcher.logger.log(f"Stopped running at: {formatted_time}")
+    while not switcher.keyboard_interupt:
+        print("in main")
+        if (not switcher.config.critical_error):
+            if (switcher.config.config_data['service'] == 'gsettings'):
+                switcher.use_gsettings()
+            else:
+                switcher.use_hydrapaper()
+        
+        # check if updates. causes a second check if 
+        # update caused it to leave one of the display loops, 
+        # but allows program to keep running if config is messed up 
+        # until it is fixed, without needing to find and run this script
+        switcher.config.check_config_updated()
+            
